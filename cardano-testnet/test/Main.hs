@@ -1,7 +1,5 @@
 {-# LANGUAGE FlexibleInstances #-}
 
-{-# OPTIONS_GHC -Wno-deprecations #-} -- TODO Fix deprecations
-
 module Main
   ( main
   ) where
@@ -22,7 +20,7 @@ import qualified Test.Util as H
 tests :: IO TestTree
 tests = pure $ T.testGroup "test/Spec.hs"
   [ T.testGroup "Spec"
-    [  H.ignoreOnWindows "Shutdown" Spec.Node.Shutdown.hprop_shutdown
+    [ H.ignoreOnWindows "Shutdown" Spec.Node.Shutdown.hprop_shutdown
     , H.ignoreOnWindows "ShutdownOnSlotSynced" Spec.ShutdownOnSlotSynced.hprop_shutdownOnSlotSynced
     , T.testGroup "Alonzo"
       [ H.ignoreOnMacAndWindows "leadership-schedule" Spec.Cli.Alonzo.LeadershipSchedule.hprop_leadershipSchedule
