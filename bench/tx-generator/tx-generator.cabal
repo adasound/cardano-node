@@ -26,7 +26,7 @@ library
 
   exposed-modules:
                        Cardano.Benchmarking.Command
-                       Cardano.Benchmarking.Compiler                       
+                       Cardano.Benchmarking.Compiler
                        Cardano.Benchmarking.FundSet
                        Cardano.Benchmarking.GeneratorTx
                        Cardano.Benchmarking.GeneratorTx.Error
@@ -44,8 +44,8 @@ library
                        Cardano.Benchmarking.Script.Aeson
                        Cardano.Benchmarking.Script.Core
                        Cardano.Benchmarking.Script.Env
-                       Cardano.Benchmarking.Script.NodeConfig                       
-                       Cardano.Benchmarking.Script.Selftest                       
+                       Cardano.Benchmarking.Script.NodeConfig
+                       Cardano.Benchmarking.Script.Selftest
                        Cardano.Benchmarking.Script.Setters
                        Cardano.Benchmarking.Script.Store
                        Cardano.Benchmarking.Script.Types
@@ -71,6 +71,8 @@ library
                      , cardano-cli
                      , cardano-crypto-class
                      , cardano-crypto-wrapper
+                     , cardano-data
+                     , cardano-git-rev
                      , cardano-ledger-alonzo
                      , cardano-ledger-byron
                      , cardano-node
