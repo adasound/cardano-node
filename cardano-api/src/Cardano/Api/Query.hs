@@ -192,51 +192,50 @@ deriving instance Show (QueryInEra era result)
 
 
 data QueryInShelleyBasedEra era result where
-     QueryEpoch
-       :: QueryInShelleyBasedEra era EpochNo
+  QueryEpoch
+    :: QueryInShelleyBasedEra era EpochNo
 
-     QueryGenesisParameters
-       :: QueryInShelleyBasedEra era GenesisParameters
+  QueryGenesisParameters
+    :: QueryInShelleyBasedEra era GenesisParameters
 
-     QueryProtocolParameters
-       :: QueryInShelleyBasedEra era ProtocolParameters
+  QueryProtocolParameters
+    :: QueryInShelleyBasedEra era ProtocolParameters
 
-     QueryProtocolParametersUpdate
-       :: QueryInShelleyBasedEra era
+  QueryProtocolParametersUpdate
+    :: QueryInShelleyBasedEra era
             (Map (Hash GenesisKey) ProtocolParametersUpdate)
 
-     QueryStakeDistribution
-       :: QueryInShelleyBasedEra era (Map (Hash StakePoolKey) Rational)
+  QueryStakeDistribution
+    :: QueryInShelleyBasedEra era (Map (Hash StakePoolKey) Rational)
 
-     QueryUTxO
-       :: QueryUTxOFilter
-       -> QueryInShelleyBasedEra era (UTxO era)
+  QueryUTxO
+    :: QueryUTxOFilter
+    -> QueryInShelleyBasedEra era (UTxO era)
 
-     QueryStakeAddresses
-       :: Set StakeCredential
-       -> NetworkId
-       -> QueryInShelleyBasedEra era (Map StakeAddress Lovelace,
-                                      Map StakeAddress PoolId)
+  QueryStakeAddresses
+    :: Set StakeCredential
+    -> NetworkId
+    -> QueryInShelleyBasedEra era (Map StakeAddress Lovelace, Map StakeAddress PoolId)
 
-     QueryStakePools
-       :: QueryInShelleyBasedEra era (Set PoolId)
+  QueryStakePools
+    :: QueryInShelleyBasedEra era (Set PoolId)
 
-     QueryStakePoolParameters
-       :: Set PoolId
-       -> QueryInShelleyBasedEra era (Map PoolId StakePoolParameters)
+  QueryStakePoolParameters
+    :: Set PoolId
+    -> QueryInShelleyBasedEra era (Map PoolId StakePoolParameters)
 
      -- TODO: add support for RewardProvenance
      -- QueryPoolRanking
      --   :: QueryInShelleyBasedEra era RewardProvenance
 
-     QueryDebugLedgerState
-       :: QueryInShelleyBasedEra era (SerialisedDebugLedgerState era)
+  QueryDebugLedgerState
+    :: QueryInShelleyBasedEra era (SerialisedDebugLedgerState era)
 
-     QueryProtocolState
-       :: QueryInShelleyBasedEra era (ProtocolState era)
+  QueryProtocolState
+    :: QueryInShelleyBasedEra era (ProtocolState era)
 
-     QueryCurrentEpochState
-       :: QueryInShelleyBasedEra era (SerialisedCurrentEpochState era)
+  QueryCurrentEpochState
+    :: QueryInShelleyBasedEra era (SerialisedCurrentEpochState era)
 
 deriving instance Show (QueryInShelleyBasedEra era result)
 
