@@ -203,8 +203,12 @@ module Cardano.Api.Shelley
     ProtocolState(..),
     decodeProtocolState,
     SerialisedDebugLedgerState(..),
+    CurrentEpochState(..),
     SerialisedCurrentEpochState(..),
     decodeCurrentEpochState,
+    PoolState(..),
+    SerialisedPoolState(..),
+    decodePoolState,
     UTxO(..),
 
     -- ** Various calculations
@@ -227,8 +231,9 @@ import           Cardano.Api.Address
 import           Cardano.Api.Block
 import           Cardano.Api.Certificate
 import           Cardano.Api.Eras
-import           Cardano.Api.IPC
 import           Cardano.Api.InMode
+import           Cardano.Api.IPC
+import           Cardano.Api.KeysByron
 import           Cardano.Api.KeysPraos
 import           Cardano.Api.KeysShelley
 import           Cardano.Api.LedgerState

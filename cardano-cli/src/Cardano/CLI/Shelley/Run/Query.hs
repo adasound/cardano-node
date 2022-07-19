@@ -6,6 +6,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
@@ -87,25 +88,45 @@ import           Cardano.Ledger.Shelley.EpochBoundary
 import           Cardano.Ledger.Shelley.LedgerState (DPState (..),
                    EpochState (esLState, esSnapshots), LedgerState (..), NewEpochState (nesEs),
                    PState (_fPParams, _pParams, _retiring))
+import qualified Cardano.Ledger.Shelley.LedgerState as SL
 import qualified Cardano.Ledger.Shelley.PParams as Shelley
 import           Cardano.Ledger.Shelley.Scripts ()
 import           Cardano.Slotting.EpochInfo (EpochInfo (..), epochInfoSlotToUTCTime, hoistEpochInfo)
+import           Control.Monad.Trans.Except (except)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither,
+                   hoistMaybe, left, newExceptT)
+import           Data.Aeson.Encode.Pretty (encodePretty)
+import           Data.Aeson.Types as Aeson
+import           Data.Coerce (coerce)
+import           Data.List (nub)
+import           Data.Sharing (Interns, Share)
+import           Data.Text.Lazy.Builder (toLazyText)
+import           Data.Time.Clock
 
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Types (RelativeTime (..),
                    SystemStart (..), toRelativeTime)
 import           Ouroboros.Consensus.Cardano.Block as Consensus (EraMismatch (..))
--- import qualified Ouroboros.Consensus.Protocol.Praos as Praos
 import           Ouroboros.Consensus.Protocol.TPraos
 import           Ouroboros.Network.Block (Serialised (..))
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type (AcquireFailure (..))
 
+import qualified Data.ByteString.Lazy.Char8 as LBS
+import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
+import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text
+import qualified Data.Text.IO as T
+import qualified Data.Text.IO as Text
+import qualified Data.Vector as Vector
+import qualified Data.VMap as VMap
+import           Formatting.Buildable (build)
+import           Numeric (showEFloat)
 import qualified Ouroboros.Consensus.HardFork.History as Consensus
 import qualified Ouroboros.Consensus.Protocol.Abstract as Consensus
 import qualified Ouroboros.Consensus.Protocol.Praos.Common as Consensus
 
 import qualified Ouroboros.Consensus.HardFork.History.Qry as Qry
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as LocalStateQuery
-
 
 {- HLINT ignore "Reduce duplication" -}
 {- HLINT ignore "Use const" -}
@@ -127,7 +148,7 @@ data ShelleyQueryCmdError
   | ShelleyQueryCmdGenesisReadError !ShelleyGenesisCmdError
   | ShelleyQueryCmdLeaderShipError !LeadershipError
   | ShelleyQueryCmdTextEnvelopeReadError !(FileError TextEnvelopeError)
-  | ShelleyQueryCmdTextReadError !(FileError InputDecodeError )
+  | ShelleyQueryCmdTextReadError !(FileError InputDecodeError)
   | ShelleyQueryCmdColdKeyReadFileError !(FileError InputDecodeError)
   | ShelleyQueryCmdOpCertCounterReadError !(FileError TextEnvelopeError)
   | ShelleyQueryCmdProtocolStateDecodeFailure !(LBS.ByteString, DecoderError)
@@ -135,6 +156,7 @@ data ShelleyQueryCmdError
   | ShelleyQueryCmdNodeUnknownStakePool
       FilePath
       -- ^ Operational certificate of the unknown stake pool.
+  | ShelleyQueryCmdDecodeError Text DecoderError
 
   deriving Show
 
@@ -170,7 +192,8 @@ renderShelleyQueryCmdError err =
       Text.pack $ "The stake pool associated with: " <> nodeOpCert <> " was not found. Ensure the correct KES key has been " <>
                   "specified and that the stake pool is registered. If you have submitted a stake pool registration certificate " <>
                   "in the current epoch, you must wait until the following epoch for the registration to take place."
-
+    ShelleyQueryCmdDecodeError typeName decoderError ->
+      "Failed to decode " <> typeName <> ".  Error: " <> Text.pack (show decoderError)
 
 runQueryCmd :: QueryCmd -> ExceptT ShelleyQueryCmdError IO ()
 runQueryCmd cmd =
@@ -199,6 +222,8 @@ runQueryCmd cmd =
       runQueryUTxO consensusModeParams qFilter networkId mOutFile
     QueryKesPeriodInfo consensusModeParams network nodeOpCert mOutFile ->
       runQueryKesPeriodInfo consensusModeParams network nodeOpCert mOutFile
+    QueryPoolState' consensusModeParams network poolid ->
+      runQueryPoolState consensusModeParams network poolid
 
 runQueryProtocolParameters
   :: AnyConsensusModeParams
@@ -605,7 +630,9 @@ runQueryPoolParams
   -> NetworkId
   -> Hash StakePoolKey
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryPoolParams (AnyConsensusModeParams cModeParams) network poolid = do
+runQueryPoolParams (AnyConsensusModeParams cModeParams) network poolIds = do
+  liftIO . IO.hPutStrLn IO.stderr $ "WARNING: The query pool-params command is deprecated.  Use query pool-state instead"
+
   SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr readEnvSocketPath
   let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
 
@@ -618,7 +645,31 @@ runQueryPoolParams (AnyConsensusModeParams cModeParams) network poolid = do
 
   let qInMode = QueryInEra eInMode . QueryInShelleyBasedEra sbe $ QueryDebugLedgerState
   result <- executeQuery era cModeParams localNodeConnInfo qInMode
-  obtainLedgerEraClassConstraints sbe (writePoolParams poolid) result
+  obtainLedgerEraClassConstraints sbe (writePoolParams poolIds) result
+
+
+-- | Query the current and future parameters for a stake pool, including the retirement date.
+-- Any of these may be empty (in which case a null will be displayed).
+--
+runQueryPoolState
+  :: AnyConsensusModeParams
+  -> NetworkId
+  -> [Hash StakePoolKey]
+  -> ExceptT ShelleyQueryCmdError IO ()
+runQueryPoolState (AnyConsensusModeParams cModeParams) network poolIds = do
+  SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr readEnvSocketPath
+  let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
+
+  anyE@(AnyCardanoEra era) <- determineEra cModeParams localNodeConnInfo
+  let cMode = consensusModeOnly cModeParams
+  sbe <- getSbe $ cardanoEraStyle era
+
+  eInMode <- toEraInMode era cMode
+    & hoistMaybe (ShelleyQueryCmdEraConsensusModeMismatch (AnyConsensusMode cMode) anyE)
+
+  let qInMode = QueryInEra eInMode . QueryInShelleyBasedEra sbe $ QueryPoolState $ Just $ Set.fromList poolIds
+  result <- executeQuery era cModeParams localNodeConnInfo qInMode
+  obtainLedgerEraClassConstraints sbe writePoolState result
 
 
 -- | Obtain stake snapshot information for a pool, plus information about the total active stake.
@@ -842,7 +893,7 @@ writePoolParams :: forall era ledgerera. ()
   => Era.Crypto ledgerera ~ StandardCrypto
   => PoolId
   -> SerialisedDebugLedgerState era
-  -> ExceptT ShelleyQueryCmdError IO ()
+    -> ExceptT ShelleyQueryCmdError IO ()
 writePoolParams (StakePoolKeyHash hk) qState =
   case decodeDebugLedgerState qState of
     -- In the event of decode failure print the CBOR instead
@@ -860,6 +911,35 @@ writePoolParams (StakePoolKeyHash hk) qState =
       let retiring = Map.lookup hk $ _retiring poolState
 
       liftIO . LBS.putStrLn $ encodePretty $ Params poolParams fPoolParams retiring
+
+-- | This function obtains the pool parameters, equivalent to the following jq query on the output of query ledger-state
+--   .nesEs.esLState._delegationState._pstate._pParams.<pool_id>
+writePoolState :: forall era ledgerera. ()
+  => ShelleyLedgerEra era ~ ledgerera
+  => Era.Crypto ledgerera ~ StandardCrypto
+  => Ledger.Era ledgerera
+  => SerialisedPoolState era
+  -> ExceptT ShelleyQueryCmdError IO ()
+writePoolState serialisedCurrentEpochState =
+  case decodePoolState serialisedCurrentEpochState of
+    Left err -> left (ShelleyQueryCmdDecodeError "PoolState" err)
+
+    Right (PoolState poolState) -> do
+      let hks = Set.toList $ Set.fromList $ Map.keys (_pParams poolState) <> Map.keys (_fPParams poolState) <> Map.keys (_retiring poolState)
+
+      let poolStates :: Map (KeyHash 'StakePool StandardCrypto) (Params StandardCrypto)
+          poolStates = Map.fromList $ hks <&>
+            ( \hk ->
+              ( hk
+              , Params
+                { poolParameters        = Map.lookup hk (SL._pParams  poolState)
+                , futurePoolParameters  = Map.lookup hk (SL._fPParams poolState)
+                , retiringEpoch         = Map.lookup hk (SL._retiring poolState)
+                }
+              )
+            )
+
+      liftIO . LBS.putStrLn $ encodePretty poolStates
 
 writeProtocolState ::
   ( FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
@@ -1345,7 +1425,6 @@ obtainLedgerEraClassConstraints
       , ToJSON (DebugLedgerState era)
       , FromCBOR (DebugLedgerState era)
       , Era.Crypto ledgerera ~ StandardCrypto
-      , ToJSON (Core.PParams ledgerera)
       ) => a) -> a
 obtainLedgerEraClassConstraints ShelleyBasedEraShelley f = f
 obtainLedgerEraClassConstraints ShelleyBasedEraAllegra f = f
