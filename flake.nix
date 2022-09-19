@@ -64,6 +64,11 @@
     };
 
     cardano-mainnet-mirror.url = "github:input-output-hk/cardano-mainnet-mirror/nix";
+
+    tullia = {
+      url = "github:input-output-hk/tullia";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
@@ -79,6 +84,7 @@
     , node-measured
     , node-process
     , cardano-node-workbench
+    , tullia
     , ...
     }@input:
     let
@@ -386,7 +392,8 @@
               };
             };
           };
-        }
+        } //
+        tullia.fromSimple system (import ./tullia.nix)
       );
 
       makeRequired = isPr: extra:
