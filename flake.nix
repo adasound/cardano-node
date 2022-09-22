@@ -393,7 +393,7 @@
             };
           };
         } //
-        tullia.fromSimple system (import ./tullia.nix)
+        tullia.fromSimple system (import ./nix/tullia.nix self system)
       );
 
       makeRequired = isPr: extra:
