@@ -1,7 +1,7 @@
-{-# LANGUAGE BangPatterns        #-}
-{-# LANGUAGE LambdaCase          #-}
+{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeFamilies        #-}
+{-# LANGUAGE TypeFamilies #-}
 
 
 module Cardano.Logging.Trace (
