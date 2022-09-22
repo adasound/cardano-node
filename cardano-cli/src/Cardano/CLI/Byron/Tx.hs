@@ -22,7 +22,7 @@ module Cardano.CLI.Byron.Tx
   )
 where
 
-import           Cardano.Prelude hiding (option, trace, (%))
+import           Cardano.Prelude hiding (trace, (%))
 import           Prelude (error)
 
 import           Control.Monad.Trans.Except.Extra (firstExceptT, left)
