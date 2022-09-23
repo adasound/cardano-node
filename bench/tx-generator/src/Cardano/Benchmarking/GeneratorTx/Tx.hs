@@ -19,8 +19,8 @@ module Cardano.Benchmarking.GeneratorTx.Tx
   )
 where
 
-import           Prelude
 import           Cardano.Benchmarking.Types (TxAdditionalSize (..))
+import           Prelude
 
 import           Cardano.Api
 

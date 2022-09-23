@@ -10,7 +10,7 @@ module Cardano.Benchmarking.GeneratorTx.Tx.Byron
   )
 where
 
-import           Cardano.Prelude hiding (option, trace, (%))
+import           Cardano.Prelude hiding (trace, (%))
 import           Prelude (error)
 
 import qualified Data.Map.Strict as Map

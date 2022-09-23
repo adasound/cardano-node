@@ -9,6 +9,7 @@
 {-# LANGUAGE PackageImports #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -30,12 +31,11 @@ import           Cardano.Api.Shelley (PlutusScriptOrReferenceInput (..), Protoco
                    protocolParamMaxTxExUnits, protocolParamPrices)
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Type (SubmitResult (..))
 
-import           Cardano.Benchmarking.FundSet (FundInEra (..),
-                   liftAnyEra)
+import           Cardano.Benchmarking.FundSet (FundInEra (..), liftAnyEra)
 
 import qualified Cardano.Benchmarking.Fifo as Fifo
-import qualified Cardano.Benchmarking.FundSet as FundSet
 import           Cardano.Benchmarking.FundSet as FundSet (getFundTxIn)
+import qualified Cardano.Benchmarking.FundSet as FundSet
 import           Cardano.Benchmarking.GeneratorTx as GeneratorTx (AsyncBenchmarkControl, TxGenError)
 import qualified Cardano.Benchmarking.GeneratorTx as GeneratorTx (readSigningKey, secureGenesisFund,
                    waitBenchmark, walletBenchmark)
@@ -235,7 +235,7 @@ localSubmitTx tx = do
     SubmitFail e -> do
       let msg = concat [ "local submit failed: " , show e , " (" , show tx , ")" ]
       traceDebug msg
-      return ret      
+      return ret
 --      throwE $ ApiError msg
 
 -- TODO:
@@ -291,14 +291,14 @@ runBenchmarkInEra sourceWallet submitMode (ThreadName threadName) shape collater
 
     toUTxO :: [ ToUTxO era ]
     toUTxO = repeat $ Wallet.mkUTxOVariant networkId fundKey -- TODO: make configurable
-  
+
     fundToStore = mkWalletFundStoreList walletRefDst
 
     sourceToStore = sourceToStoreTransaction txGenerator fundSource inToOut (makeToUTxOList toUTxO) fundToStore
 
     walletScript :: WalletScript era
     walletScript = benchmarkWalletScript sourceToStore (NumberOfTxs $ auxTxCount shape)
-  
+
   case submitMode of
     NodeToNode targetNodes -> do
       connectClient <- getConnectClient
@@ -324,7 +324,7 @@ selectCollateralFunds (Just walletName) = do
   case collateralSupportedInEra (cardanoEra @era) of
       Nothing -> throwE $ WalletError $ "selectCollateralFunds: collateral: era not supported :" ++ show (cardanoEra @era)
       Just p -> return (TxInsCollateral p $  map getFundTxIn collateralFunds, collateralFunds)
-  
+
 dumpToFile :: FilePath -> TxInMode CardanoMode -> ActionM ()
 dumpToFile filePath tx = liftIO $ dumpToFileIO filePath tx
 
@@ -373,7 +373,7 @@ createChangeInEra :: forall era. IsShelleyBasedEra era
   => WalletName
   -> SubmitMode
   -> PayMode
-  -> PayMode  
+  -> PayMode
   -> Lovelace
   -> Int
   -> AsType era
@@ -382,7 +382,7 @@ createChangeInEra sourceWallet submitMode payMode changeMode value count _era = 
   fee <- getUser TFee
   protocolParameters <- getProtocolParameters
   (toUTxO, addressMsg) <- interpretPayMode payMode
-  (toUTxOChange, _) <- interpretPayMode changeMode  
+  (toUTxOChange, _) <- interpretPayMode changeMode
   let
     createCoins :: FundSet.FundSource IO -> [Lovelace] -> ActionM (Either String (TxInMode CardanoMode))
     createCoins fundSource coins = do
@@ -405,11 +405,11 @@ interpretPayMode payMode = do
       return ( createAndStore (Wallet.mkUTxOVariant networkId fundKey) (mkWalletFundStore walletRef)
              , Text.unpack $ serialiseAddress $ keyAddress @era networkId fundKey)
     PayToScript scriptSpec destWallet -> do
-      walletRef <- getName destWallet      
+      walletRef <- getName destWallet
       (witness, script, scriptData, _scriptFee) <- makePlutusContext scriptSpec
       return ( createAndStore (mkUTxOScript networkId (script, scriptData) witness) (mkWalletFundStore walletRef)
                , Text.unpack $ serialiseAddress $ makeShelleyAddress networkId (PaymentCredentialByScript $ hashScript script) NoStakeAddress )
-  
+
 createChangeGeneric ::
      WalletName
   -> SubmitMode

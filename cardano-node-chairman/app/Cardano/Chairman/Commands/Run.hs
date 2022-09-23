@@ -7,7 +7,7 @@ module Cardano.Chairman.Commands.Run
   ( cmdRun
   ) where
 
-import           Cardano.Prelude hiding (option)
+import           Cardano.Prelude
 
 import           Control.Monad.Class.MonadTime (DiffTime)
 import           Control.Tracer (Tracer (..), stdoutTracer)
