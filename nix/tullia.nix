@@ -5,7 +5,7 @@ let
   inherit (self.inputs.utils.lib) flattenTree;
 
   ciInputName = "GitHub event";
-in {
+in rec {
   tasks = let
     common = {
       config,
@@ -47,6 +47,26 @@ in {
         (__foldl' lib.mergeAttrs {})
       ]
       // { inherit (hydraJobs) build-version cardano-deployment; };
+
+    # returns attrset of tullia tasks named with the given prefix
+    # that run the corresponding task and depend on each other in the order given
+    taskSequence = taskNamePrefix: taskNames: lib.listToAttrs (
+      lib.imap0 (i: taskName: lib.nameValuePair
+        (taskNamePrefix + taskName)
+        ({...}: {
+          imports = [tasks.${taskName}];
+          after = lib.optional (i > 0) (
+            taskNamePrefix + __elemAt taskNames (i - 1)
+          );
+        })
+      ) taskNames
+    );
+
+    # returns attrset of tullia tasks that run the given hydra jobs sequentially in lexicographical order
+    hydraJobsTaskSequence = taskNamePrefix: hydraJobs: taskSequence taskNamePrefix (__attrNames hydraJobs);
+
+    ciPushTasks = hydraJobsTaskSequence "ci/push/" (systemHydraJobs self.outputs.hydraJobs);
+    ciPrTasks = hydraJobsTaskSequence "ci/pr/" (systemHydraJobs self.outputs.hydraJobsPr);
   in
     (__mapAttrs (jobName: _: (args: {
       imports = [common];
@@ -65,15 +85,17 @@ in {
       memory = 1024 * 8;
       nomad.resources.cpu = 10000;
     })) (systemHydraJobs self.outputs.hydraJobs))
+    // ciPushTasks
+    // ciPrTasks
     // {
       "ci/push" = {...}: {
         imports = [common];
-        after = __attrNames (systemHydraJobs self.outputs.hydraJobs);
+        after = [(lib.last (__attrNames ciPushTasks))];
       };
 
       "ci/pr" = {...}: {
         imports = [common];
-        after = __attrNames (systemHydraJobs self.outputs.hydraJobsPr);
+        after = [(lib.last (__attrNames ciPrTasks))];
       };
     };
 
