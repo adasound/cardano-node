@@ -9,7 +9,6 @@
 {-# LANGUAGE PackageImports #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -142,7 +141,7 @@ getConnectClient = do
   tracers  <- get BenchTracers
   (Testnet networkMagic) <- getUser TNetworkId
   protocol <- get Protocol
-  void $ return $(btSubmission2_ tracers)
+  void $ return $ btSubmission2_ tracers -- TODO this line looks strange
   ioManager <- askIOManager
   return $ benchmarkConnectTxSubmit
                        ioManager
