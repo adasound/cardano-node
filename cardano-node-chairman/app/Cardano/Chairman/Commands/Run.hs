@@ -14,6 +14,7 @@ import           Control.Tracer (Tracer (..), stdoutTracer)
 import qualified Data.Text as Text
 import qualified Data.Time.Clock as DTC
 import           Options.Applicative
+import qualified Options.Applicative as Opt
 import qualified System.IO as IO
 
 import           Cardano.Node.Configuration.NodeAddress
@@ -63,7 +64,7 @@ parseSocketPath helpMessage =
 
 parseRunningTime :: Parser DiffTime
 parseRunningTime =
-  option ((fromIntegral :: Int -> DiffTime) <$> auto)
+  Opt.option ((fromIntegral :: Int -> DiffTime) <$> auto)
     (  long "timeout"
     <> short 't'
     <> metavar "SECONDS"
@@ -72,7 +73,7 @@ parseRunningTime =
 
 parseProgress :: Parser BlockNo
 parseProgress =
-  option ((fromIntegral :: Int -> BlockNo) <$> auto)
+  Opt.option ((fromIntegral :: Int -> BlockNo) <$> auto)
     (  long "require-progress"
     <> short 'p'
     <> metavar "INT"
