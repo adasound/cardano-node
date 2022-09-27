@@ -87,6 +87,7 @@ library
                         Cardano.CLI.Shelley.Run.StakeAddress
                         Cardano.CLI.Shelley.Run.TextView
                         Cardano.CLI.Shelley.Run.Transaction
+                        Cardano.CLI.Shelley.Run.Validation
                         Cardano.CLI.Shelley.Script
 
                         Cardano.CLI.TopHandler
