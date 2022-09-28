@@ -3559,7 +3559,6 @@ toAllegraAuxiliaryData :: forall era ledgerera.
                           ShelleyLedgerEra era ~ ledgerera
                        => Ledger.AuxiliaryData ledgerera ~ Allegra.AuxiliaryData ledgerera
                        => Ledger.AnnotatedData (Ledger.Script ledgerera)
-                       => Ord (Ledger.Script ledgerera)
                        => Map Word64 TxMetadataValue
                        -> [ScriptInEra era]
                        -> Ledger.AuxiliaryData ledgerera
