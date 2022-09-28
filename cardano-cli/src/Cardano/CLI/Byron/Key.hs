@@ -71,9 +71,9 @@ newtype NewVerificationKeyFile =
 --   its hash and formatted view.
 prettyPublicKey :: VerificationKey ByronKey-> Text
 prettyPublicKey (ByronVerificationKey vk) =
-  sformat (  "    public key hash: "% build %
-           "\npublic key (base64): "% Crypto.fullVerificationKeyF %
-           "\n   public key (hex): "% Crypto.fullVerificationKeyHexF)
+  sformat (  "    public key hash: " % build %
+           "\npublic key (base64): " % Crypto.fullVerificationKeyF %
+           "\n   public key (hex): " % Crypto.fullVerificationKeyHexF)
     (Common.addressHash vk) vk vk
 
 byronWitnessToVerKey :: SomeByronSigningKey -> VerificationKey ByronKey

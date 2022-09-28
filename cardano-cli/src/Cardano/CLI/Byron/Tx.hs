@@ -80,7 +80,7 @@ newtype NewTxFile =
 --   its full structure.
 prettyAddress :: Address ByronAddr -> Text
 prettyAddress (ByronAddress addr) = sformat
-  (Common.addressF %"\n"%Common.addressDetailedF)
+  (Common.addressF % "\n" % Common.addressDetailedF)
   addr addr
 
 readByronTx :: TxFile -> ExceptT ByronTxError IO (UTxO.ATxAux ByteString)
