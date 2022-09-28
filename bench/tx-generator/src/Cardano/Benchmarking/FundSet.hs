@@ -47,7 +47,7 @@ getFundLovelace (Fund (InAnyCardanoEra _ a)) = case _fundVal a of
 -- This effectively rules out era-transitions for transactions !
 -- This is not what we want !!
 getFundWitness :: forall era. IsShelleyBasedEra era => Fund -> Witness WitCtxTxIn era
-getFundWitness fund = case (cardanoEra @ era, fund) of
+getFundWitness fund = case (cardanoEra @era, fund) of
   (ByronEra   , Fund (InAnyCardanoEra ByronEra   a)) -> _fundWitness a
   (ShelleyEra , Fund (InAnyCardanoEra ShelleyEra a)) -> _fundWitness a
   (AllegraEra , Fund (InAnyCardanoEra AllegraEra a)) -> _fundWitness a

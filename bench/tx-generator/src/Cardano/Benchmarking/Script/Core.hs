@@ -109,7 +109,7 @@ addFund era wallet txIn lovelace keyName = do
   fundKey  <- getName keyName
   let
     mkOutValue :: forall era. IsShelleyBasedEra era => AsType era -> ActionM (InAnyCardanoEra TxOutValue)
-    mkOutValue = \_ -> return $ InAnyCardanoEra (cardanoEra @ era) (lovelaceToTxOutValue lovelace)
+    mkOutValue = \_ -> return $ InAnyCardanoEra (cardanoEra @era) (lovelaceToTxOutValue lovelace)
   outValue <- withEra era mkOutValue
   addFundToWallet wallet txIn outValue fundKey
 
@@ -321,8 +321,8 @@ selectCollateralFunds (Just walletName) = do
   collateralFunds <- liftIO ( askWalletRef cw Fifo.toList ) >>= \case
     [] -> throwE $ WalletError "selectCollateralFunds: emptylist"
     l -> return l
-  case collateralSupportedInEra (cardanoEra @ era) of
-      Nothing -> throwE $ WalletError $ "selectCollateralFunds: collateral: era not supported :" ++ show (cardanoEra @ era)
+  case collateralSupportedInEra (cardanoEra @era) of
+      Nothing -> throwE $ WalletError $ "selectCollateralFunds: collateral: era not supported :" ++ show (cardanoEra @era)
       Just p -> return (TxInsCollateral p $  map getFundTxIn collateralFunds, collateralFunds)
   
 dumpToFile :: FilePath -> TxInMode CardanoMode -> ActionM ()
@@ -354,7 +354,7 @@ importGenesisFund era wallet submitMode genesisKeyName destKey = do
   let
     coreCall :: forall era. IsShelleyBasedEra era => AsType era -> ExceptT TxGenError IO Store.Fund
     coreCall _proxy = do
-      let addr = Core.keyAddress @ era networkId fundKey
+      let addr = Core.keyAddress @era networkId fundKey
       f <- GeneratorTx.secureGenesisFund tracer localSubmit networkId genesis fee ttl genesisKey addr
       return (f, fundKey)
   result <- liftCoreWithEra era coreCall
@@ -403,7 +403,7 @@ interpretPayMode payMode = do
       fundKey <- getName keyName
       walletRef <- getName destWallet
       return ( createAndStore (Wallet.mkUTxOVariant networkId fundKey) (mkWalletFundStore walletRef)
-             , Text.unpack $ serialiseAddress $ keyAddress @ era networkId fundKey)
+             , Text.unpack $ serialiseAddress $ keyAddress @era networkId fundKey)
     PayToScript scriptSpec destWallet -> do
       walletRef <- getName destWallet      
       (witness, script, scriptData, _scriptFee) <- makePlutusContext scriptSpec
@@ -552,8 +552,8 @@ makePlutusContext scriptSpec = do
 
     PlutusScript PlutusScriptV1 script' = script
     scriptWitness :: ScriptWitness WitCtxTxIn era
-    scriptWitness = case scriptLanguageSupportedInEra (cardanoEra @ era) (PlutusScriptLanguage PlutusScriptV1) of
-      Nothing -> error $ "runPlutusBenchmark: Plutus V1 scriptlanguage not supported : in era" ++ show (cardanoEra @ era)
+    scriptWitness = case scriptLanguageSupportedInEra (cardanoEra @era) (PlutusScriptLanguage PlutusScriptV1) of
+      Nothing -> error $ "runPlutusBenchmark: Plutus V1 scriptlanguage not supported : in era" ++ show (cardanoEra @era)
       Just scriptLang -> PlutusScriptWitness
                           scriptLang
                           PlutusScriptV1

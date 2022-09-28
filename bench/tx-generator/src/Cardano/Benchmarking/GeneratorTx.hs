@@ -74,7 +74,7 @@ secureGenesisFund :: forall era. IsShelleyBasedEra era
   -> AddressInEra era
   -> ExceptT TxGenError IO Fund
 secureGenesisFund submitTracer localSubmitTx networkId genesis txFee ttl key outAddr = do
-  let (_inAddr, lovelace) = genesisFundForKey @ era networkId genesis key
+  let (_inAddr, lovelace) = genesisFundForKey @era networkId genesis key
       (tx, fund) =
          genesisExpenditure networkId key outAddr lovelace txFee ttl
   r <- liftIO $

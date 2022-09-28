@@ -161,10 +161,10 @@ mkUTxOVariant networkId key value
     , mkNewFund value
     )
  where
-  mkTxOut v = TxOut (keyAddress @ era networkId key) (lovelaceToTxOutValue v) TxOutDatumNone ReferenceScriptNone
+  mkTxOut v = TxOut (keyAddress @era networkId key) (lovelaceToTxOutValue v) TxOutDatumNone ReferenceScriptNone
 
   mkNewFund :: Lovelace -> TxIx -> TxId -> Fund
-  mkNewFund val txIx txId = Fund $ InAnyCardanoEra (cardanoEra @ era) $ FundInEra {
+  mkNewFund val txIx txId = Fund $ InAnyCardanoEra (cardanoEra @era) $ FundInEra {
       _fundTxIn = TxIn txId txIx
     , _fundWitness = KeyWitness KeyWitnessForSpending
     , _fundVal = lovelaceToTxOutValue val
@@ -188,7 +188,7 @@ mkUTxOScript networkId (script, txOutDatum) witness value
                        (PaymentCredentialByScript $ hashScript script)
                        NoStakeAddress
 
-  mkTxOut v = case scriptDataSupportedInEra (cardanoEra @ era) of
+  mkTxOut v = case scriptDataSupportedInEra (cardanoEra @era) of
     Nothing -> error " mkUtxOScript scriptDataSupportedInEra==Nothing"
     Just tag -> TxOut
                   plutusScriptAddr
@@ -197,7 +197,7 @@ mkUTxOScript networkId (script, txOutDatum) witness value
                   ReferenceScriptNone   
 
   mkNewFund :: Lovelace -> TxIx -> TxId -> Fund
-  mkNewFund val txIx txId = Fund $ InAnyCardanoEra (cardanoEra @ era) $ FundInEra {
+  mkNewFund val txIx txId = Fund $ InAnyCardanoEra (cardanoEra @era) $ FundInEra {
       _fundTxIn = TxIn txId txIx
     , _fundWitness = witness
     , _fundVal = lovelaceToTxOutValue val
@@ -239,7 +239,7 @@ genTx protocolParameters (collateral, collFunds) fee metadata inFunds outputs
     }
 
   upperBound :: TxValidityUpperBound era
-  upperBound = case shelleyBasedEra @ era of
+  upperBound = case shelleyBasedEra @era of
     ShelleyBasedEraShelley -> TxValidityUpperBound ValidityUpperBoundInShelleyEra $ SlotNo maxBound
     ShelleyBasedEraAllegra -> TxValidityNoUpperBound ValidityNoUpperBoundInAllegraEra
     ShelleyBasedEraMary    -> TxValidityNoUpperBound ValidityNoUpperBoundInMaryEra
