@@ -1,5 +1,5 @@
 -- run `nix flake lock --update-input hackageNix` after updating index-state.
-index-state: 2022-06-01T00:00:00Z
+index-state: 2022-07-01T00:00:00Z
 
 packages:
     cardano-api
@@ -203,8 +203,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger
-  tag: f49879a79098d9372d63baa13b94a941a56eda34
-  --sha256: 0i9x66yqkrvx2w79dy6lzlya82yxc8567rgjj828vc2d46d6nvx6
+  tag: 501ca2c7b31a7b36433151d6d8a7c244fe6bea5a
   subdir:
     eras/alonzo/impl
     eras/alonzo/test-suite
