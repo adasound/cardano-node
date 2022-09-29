@@ -330,6 +330,11 @@ in {
         description = ''Local communication socket path, for each instance.'';
       };
 
+      withCardanoTracer = mkOption {
+        type = types.bool;
+        default = false;
+      };
+
       tracerSocketPathAccept = mkOption {
         type = funcToOr nullOrStr;
         default = null;
