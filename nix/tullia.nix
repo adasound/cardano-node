@@ -2,17 +2,20 @@ self: system:
 
 let
   inherit (self.inputs.nixpkgs) lib;
-  inherit (self.inputs.utils.lib) flattenTree;
 
   ciInputName = "GitHub event";
 in rec {
   tasks = let
+    inherit (self.inputs.tullia) flakeOutputTasks taskSequence;
+
     common = {
       config,
       ...
     }: {
       preset = {
+        # needed on top-level task to set runtime options
         nix.enable = true;
+
         github-ci = {
           enable = config.actionRun.facts != {};
           repo = "input-output-hk/cardano-node";
@@ -22,60 +25,13 @@ in rec {
       };
     };
 
-    flakeUrl = {
-      config,
-      lib,
-      ...
-    }: lib.escapeShellArg (
-      if config.actionRun.facts != {}
-      then with config.preset.github-ci; "github:${repo}/${sha}"
-      else "."
-    );
+    mkHydraJobTask = flakeOutputTask: {config, lib, ...}: {
+      imports = [common flakeOutputTask];
 
-    # the attribute name in `hydraJobs` for the current system
-    os = {
-      x86_64-linux = "linux";
-      x86_64-darwin = "macos";
-    }.${system};
-
-    # returns flattened attrset of `hydraJobs.${os}` and system-agnostic hydra jobs
-    systemHydraJobs = hydraJobs:
-      lib.pipe hydraJobs.${os} [
-        (__mapAttrs (_: flattenTree))
-        (__mapAttrs (category: lib.mapAttrs' (jobName: lib.nameValuePair "${os}.${category}.${jobName}")))
-        __attrValues
-        (__foldl' lib.mergeAttrs {})
-      ]
-      // { inherit (hydraJobs) build-version cardano-deployment; };
-
-    # returns attrset of tullia tasks named with the given prefix
-    # that run the corresponding task and depend on each other in the order given
-    taskSequence = taskNamePrefix: taskNames: lib.listToAttrs (
-      lib.imap0 (i: taskName: lib.nameValuePair
-        (taskNamePrefix + taskName)
-        ({...}: {
-          imports = [tasks.${taskName}];
-          after = lib.optional (i > 0) (
-            taskNamePrefix + __elemAt taskNames (i - 1)
-          );
-        })
-      ) taskNames
-    );
-
-    # returns attrset of tullia tasks that run the given hydra jobs sequentially in lexicographical order
-    hydraJobsTaskSequence = taskNamePrefix: hydraJobs: taskSequence taskNamePrefix (__attrNames hydraJobs);
-
-    ciPushTasks = hydraJobsTaskSequence "ci/push/" (systemHydraJobs self.outputs.hydraJobs);
-    ciPrTasks = hydraJobsTaskSequence "ci/pr/" (systemHydraJobs self.outputs.hydraJobsPr);
-  in
-    (__mapAttrs (jobName: _: (args: {
-      imports = [common];
-
-      command.text = ''
-        job=${flakeUrl args}#hydraJobs.${lib.escapeShellArg jobName}
-        echo Building "$job"…
-        nix build -L "$job"
-      '';
+      flakeOutputTask.flakeUrl = lib.mkIf (config.actionRun.facts != {}) (
+        with config.preset.github-ci;
+        "github:${repo}/${sha}"
+      );
 
       # some hydra jobs run NixOS tests
       env.NIX_CONFIG = ''
@@ -84,16 +40,28 @@ in rec {
 
       memory = 1024 * 8;
       nomad.resources.cpu = 10000;
-    })) (systemHydraJobs self.outputs.hydraJobs))
-    // ciPushTasks
-    // ciPrTasks
-    // {
-      "ci/push" = {...}: {
+    };
+    mkHydraJobTasks = __mapAttrs (_: mkHydraJobTask);
+
+    # the attribute name in `hydraJobs` for the current system
+    os = {
+      x86_64-linux = "linux";
+      x86_64-darwin = "macos";
+    }.${system};
+
+    hydraJobTasks   = mkHydraJobTasks (flakeOutputTasks ["hydraJobs"   os] self);
+    hydraJobPrTasks = mkHydraJobTasks (flakeOutputTasks ["hydraJobsPr" os] self);
+
+    ciPushTasks = taskSequence "ci/push/" hydraJobTasks   (__attrNames hydraJobTasks);
+    ciPrTasks   = taskSequence "ci/pr/"   hydraJobPrTasks (__attrNames hydraJobPrTasks);
+  in
+    ciPushTasks // ciPrTasks // {
+      "ci/push" = {lib, ...}: {
         imports = [common];
         after = [(lib.last (__attrNames ciPushTasks))];
       };
 
-      "ci/pr" = {...}: {
+      "ci/pr" = {lib, ...}: {
         imports = [common];
         after = [(lib.last (__attrNames ciPrTasks))];
       };

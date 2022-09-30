@@ -10674,11 +10674,11 @@
         "std": "std"
       },
       "locked": {
-        "lastModified": 1664309486,
-        "narHash": "sha256-wh9vsR9XZE0fEFkAPnutEcaEwPPBiFyo7mn3i7uNb3c=",
+        "lastModified": 1664555593,
+        "narHash": "sha256-C5sHoasZzUrEQLvtzGPzwQwQICtAyqT0kJ5nB2aayZw=",
         "owner": "input-output-hk",
         "repo": "tullia",
-        "rev": "fe1f2d7f460c93b4f2721c236ba2711f839c7158",
+        "rev": "d85c107d86032cbf8515f4a1d51032f8321e67e0",
         "type": "github"
       },
       "original": {
